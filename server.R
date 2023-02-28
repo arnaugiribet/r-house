@@ -9,9 +9,9 @@ library(data.table)
 library(DT)
 
 shinyServer(function(input, output) {
+  
   # Import Data and clean it
-
-  dades <- read.csv("01-data_download/idealista_properties.csv", sep='|', header=T)
+  load('01-data_download/03dadesWithROI.RData')
   setDT(dades)
   dades[,rentabilidad := round(rnorm(nrow(dades),8,1),2)]
   dades[,alquiler:= round(rentabilidad*(price*1.15)/12/100)]

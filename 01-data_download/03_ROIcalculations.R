@@ -5,6 +5,9 @@ rm(list=ls())
 load('01-data_download/dades.RData')
 library('data.table')
 library(foreach)
+library('dplyr')
+library(doSNOW)
+
 euc.dist <- function(x1, x2, units='km') {
   
   #each x1 and x2 are a vector containing a latitude and a longitude
@@ -34,12 +37,15 @@ dadesRent<-dades[which(dades$operation=='rent'),]
 ##2. habitacions
 ##3. distància
 
-#code
-dadesSale[,SuggestedRentalPriceByArea := NA]
+################## start of function
+dadesSale$ReferencedRentals<-NA
+dadesSale$NumReferencedRentals<-NA
+dadesSale$SuggestedRentalPriceByArea<-NA
 
-for(i in 1:nrow(dadesSale)){
+getSuggestedRentalPriceByArea <- function(dadesSale,i){
+
+
   
-  if(i %in% seq(10,9450,10)) cat(i,end=' ')
   dadesSale_i<-dadesSale[i,]
   
   #find similar rentals. if less than 5 are found, add values to the number of rooms to search for
@@ -90,22 +96,70 @@ for(i in 1:nrow(dadesSale)){
     it<-it+1
   }
   
-  #get the distance to such rentals and keep only the closest 5
+  #get the distance to such rentals and keep only the number we chose to be needed for the algorithm, originally 5
   distanceToRentals_list_i <- foreach(j = 1:nrow(dadesRent_i),
                                       .combine = 'c') %do% euc.dist(dadesSale_i[,c('latitude','longitude')],
                                                                     dadesRent_i[j,c('latitude','longitude')])
   names(distanceToRentals_list_i)<-dadesRent_i$propertyCode
   distanceToRentals_i<-sort(distanceToRentals_list_i)
   distanceToRentals_i_5closest<-distanceToRentals_i[1:numRentalsNeeded]
-  codes_5closest<-names(distanceToRentals_i_5closest)
-  dadesRent_i<-dadesRent_i[which(dadesRent_i$propertyCode %in% codes_5closest),]
-  dadesRent_i<-dadesRent_i[match(codes_5closest, dadesRent_i$propertyCode),]
   
-  #find the median price/m2
-  dadesSale$ReferencedRentals[i]<-list(Map(list, dadesRent_i$propertyCode, dadesRent_i$url))
-  dadesSale$SuggestedRentalPriceByArea[i]<-median(dadesRent_i$priceByArea)
+  #if the distance gets bigger quickly, we filter those
+  #currently: the distance to the first is the reference. we cut those which are bigger than 5 times the distance
+  w_keep<-which(distanceToRentals_i_5closest/distanceToRentals_i_5closest[1]<5)
+  distanceToRentals_i_5closest<-distanceToRentals_i_5closest[w_keep]
+  codes_5closest<-names(distanceToRentals_i_5closest)
+
+  #we keep only these
+  dadesRent_i<-dadesRent_i[which(dadesRent_i$propertyCode %in% codes_5closest),]  #filter them
+  dadesRent_i<-dadesRent_i[match(codes_5closest, dadesRent_i$propertyCode),]   #order them
+
+  #find the mean price/m2
+  dadesSale_i$ReferencedRentals<-nrow(dadesRent_i)
+  dadesSale_i$NumReferencedRentals<-list(Map(c, dadesRent_i$propertyCode, dadesRent_i$url))
+  dadesSale_i$SuggestedRentalPriceByArea<-mean(dadesRent_i$priceByArea)
+  
+  return(dadesSale_i)
+}
+################## end of function
+
+#I prepare my clusters for parallel computing
+n.cores <- parallel::detectCores() - 1
+my.cluster <- parallel::makeCluster(
+  n.cores, 
+  type = "PSOCK"
+)
+
+#check cluster definition (optional)
+print(my.cluster)
+#register it to be used by %dopar%
+registerDoSNOW(my.cluster)
+#check if it is registered (optional)
+foreach::getDoParRegistered()
+
+#Run the function in parallel!
+iterations <- nrow(dadesSale)
+pb <- txtProgressBar(max = iterations, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+
+dadesSaleROI <- foreach(i = 1:iterations, .combine = rbind, .packages='foreach',
+                  .options.snow = opts) %dopar%
+  {
+    getSuggestedRentalPriceByArea(dadesSale,i)
+  }
+
+close(pb)
+stopCluster(my.cluster)
+
+dadesSale<-dadesSaleROI; rm(dadesSaleROI)
+
+#Create the rest of variables
+dadesSale[,SuggestedRentalPrice := size*SuggestedRentalPriceByArea]
+if(sum(is.na(dadesSale$SuggestedRentalPrice))>0){
+  dadesSale<-dadesSale[-which(is.na(SuggestedRentalPrice)),]
 }
 
-dadesSale[,SuggestedRentalPrice := size*SuggestedRentalPriceByArea]
+dadesSale[,ROIpct := 100*12*SuggestedRentalPrice/(price*1.15)]
 
 save(dadesRent,dadesSale,file='01-data_download/03dadesWithROI.RData')
