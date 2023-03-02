@@ -77,7 +77,7 @@ shinyServer(function(input, output) {
                                                    "Habitaciones","Altura","Ascensor",
                                                    "Exterior","Estado", "Dirección", "Enlace"),
                                       options=list(pageLength=-1,
-                                                   dom='ftir'))
+                                                   dom='tir'))
     output$filteredSaleData <-
       DT::renderDataTable(filteredSaleDataOutput)
   })
@@ -91,7 +91,10 @@ shinyServer(function(input, output) {
                                     colnames = c("Rentabilidad", "Precio", "Precio por m2",
                                                  "Alquiler estimado", "Tipo de propiedad", "m2",
                                                  "Habitaciones","Altura","Ascensor",
-                                                 "Exterior","Estado", "Dirección", "Enlace"))
+                                                 "Exterior","Estado", "Dirección", "Enlace"),
+                            options=list(pageLength=20,
+                                         lengthMenu=c(10,20,50),
+                                         dom='ltir'))
   output$saleData <-
     DT::renderDataTable(saleDataOutput)
   
@@ -101,7 +104,8 @@ shinyServer(function(input, output) {
     dadesRent[,c('price','priceByArea','propertyType','size','rooms','floor','hasLift','exterior',
                  'status','address','url')],filter = 'top',
     colnames = c("Alquiler Mensual", "Precio por m2", "Tipo de propiedad", "m2","Habitaciones",
-                 "Altura","Ascensor","Exterior","Estado", "Dirección", "Enlace")))
-
-  
+                 "Altura","Ascensor","Exterior","Estado", "Dirección", "Enlace"),
+    options=list(pageLength=20,
+                 lengthMenu=c(10,20,50),
+                 dom='ltir')))
 })
