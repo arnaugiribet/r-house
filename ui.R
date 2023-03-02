@@ -54,7 +54,8 @@ navbarPage("Rentabilidad de pisos", id="main",
                                    fluidRow(column(12, # Estado
                                                    checkboxGroupInput("statusSelectInput",
                                                                 "Estado",
-                                                                choices = c('Obra Nueva','Buen Estado','A Reformar'))))
+                                                                choiceNames = c('Obra Nueva','Buen Estado','A Reformar'),
+                                                                choiceValues = c('newdevelopment','good','renew'))))
 
                                    ),
                          
