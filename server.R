@@ -50,7 +50,8 @@ shinyServer(function(input, output) {
       leaflet(dadesSale) %>% 
       addCircles(lng = ~longitude, lat = ~latitude) %>% 
       addTiles(urlTemplate = "http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", attribution = 'Google') %>%
-      addCircleMarkers(data=dadesSale, lat =  ~latitude, lng =~longitude, 
+      addCircleMarkers(data=dadesSale,
+                       lat =  ~latitude, lng =~longitude, layerId = ~propertyCode,
                        radius = 8, popup = ~as.character(cntnt), 
                        fillColor = ~pal(rentabilidad_color),
                        stroke = T, color = "black", opacity=0.25, fillOpacity = 1)%>%
@@ -61,13 +62,46 @@ shinyServer(function(input, output) {
       setView(lng = 1.747969, lat = 41.912181, zoom=8)
         })
   
-  #create a data object to display data
+  #get the click event from the map (when the user clicks a property)
+  observeEvent(input$bbmap_marker_click, { # update the location selectInput on map clicks
+    selectedProperty <- input$bbmap_marker_click$id
+    print(selectedProperty)
+    filteredSaleData<-dadesSale[,] %>% filter(propertyCode==selectedProperty)
+    filteredSaleDataOutput<-datatable(filteredSaleData[,c('ROIpct','price','priceByArea',
+                                                          'SuggestedRentalPrice','propertyType','size',
+                                                          'rooms','floor','hasLift',
+                                                          'exterior','status','address','url')],
+                                      filter = 'none',
+                                      colnames = c("Rentabilidad", "Precio", "Precio por m2",
+                                                   "Alquiler estimado", "Tipo de propiedad", "m2",
+                                                   "Habitaciones","Altura","Ascensor",
+                                                   "Exterior","Estado", "Dirección", "Enlace"),
+                                      options=list(pageLength=-1,
+                                                   dom='ftir'))
+    output$filteredSaleData <-
+      DT::renderDataTable(filteredSaleDataOutput)
+  })
   
-  output$data <-DT::renderDataTable(datatable(
-      dadesSale[,c('ROIpct','price','priceByArea','SuggestedRentalPrice','propertyType','size','rooms','floor','hasLift','exterior',
-               'status','address','url')],filter = 'top',
-      colnames = c("Rentabilidad", "Precio", "Precio por m2", "Alquiler estimado", "Tipo de propiedad", "m2","Habitaciones",
-                   "Altura","Ascensor","Exterior","Estado", "Dirección", "Enlace")))
+  #display Sale data
+  saleDataOutput<-datatable(dadesSale[,c('ROIpct','price','priceByArea',
+                                                        'SuggestedRentalPrice','propertyType','size',
+                                                        'rooms','floor','hasLift',
+                                                        'exterior','status','address','url')],
+                                    filter = 'top',
+                                    colnames = c("Rentabilidad", "Precio", "Precio por m2",
+                                                 "Alquiler estimado", "Tipo de propiedad", "m2",
+                                                 "Habitaciones","Altura","Ascensor",
+                                                 "Exterior","Estado", "Dirección", "Enlace"))
+  output$saleData <-
+    DT::renderDataTable(saleDataOutput)
+  
+  #display Rent data
+  
+  output$rentData <-DT::renderDataTable(datatable(
+    dadesRent[,c('price','priceByArea','propertyType','size','rooms','floor','hasLift','exterior',
+                 'status','address','url')],filter = 'top',
+    colnames = c("Alquiler Mensual", "Precio por m2", "Tipo de propiedad", "m2","Habitaciones",
+                 "Altura","Ascensor","Exterior","Estado", "Dirección", "Enlace")))
 
   
 })
