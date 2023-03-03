@@ -2,23 +2,10 @@ library(shiny)
 library(leaflet)
 
 navbarPage("Rentabilidad de pisos", id="main",
-        #    tags$style(HTML("
-        # .navbar-default .navbar-brand {color: cyan;}
-        # .navbar-default .navbar-brand:hover {color: blue;}
-        # .navbar { background-color: gray;}
-        # .navbar-default .navbar-nav > li > a {color:black;}
-        # .navbar-default .navbar-nav > .active > a,
-        # .navbar-default .navbar-nav > .active > a:focus,
-        # .navbar-default .navbar-nav > .active > a:hover {color: pink;background-color: purple;}
-        # .navbar-default .navbar-nav > li > a:hover {color: black;background-color:yellow;text-decoration:underline;}
-        # .navbar-default .navbar-nav > li > a[data-value='t1'] {color: red;background-color: pink;}
-        # .navbar-default .navbar-nav > li > a[data-value='t2'] {color: blue;background-color: lightblue;}
-        # .navbar-default .navbar-nav > li > a[data-value='t3'] {color: green;background-color: lightgreen;}")),
-           
            tabPanel("Mapa",
-                    sidebarLayout(
+                    fluidRow(sidebarLayout(
                       #Panel lateral
-                      sidebarPanel(width=3,
+                      sidebarPanel(style='height: 600px',width=3,
                                    
                                    fluidRow(column(12, # Rentabilidad
                                                    checkboxGroupInput("roiSelectInput",
@@ -53,16 +40,24 @@ navbarPage("Rentabilidad de pisos", id="main",
                                                                 value = NA, min=0, max=9999, step=10))),
                                    fluidRow(column(12, # Estado
                                                    checkboxGroupInput("statusSelectInput",
-                                                                "Estado",
-                                                                choiceNames = c('Obra Nueva','Buen Estado','A Reformar'),
-                                                                choiceValues = c('newdevelopment','good','renew'))))
-
-                                   ),
-                         
+                                                                      "Estado",
+                                                                      choiceNames = c('Obra Nueva','Buen Estado','A Reformar'),
+                                                                      choiceValues = c('newdevelopment','good','renew'))))
+                                   
+                      ),
+                      
                       #Panel central
-                      mainPanel(leafletOutput("bbmap", height='600px'),
-                                DT::dataTableOutput("filteredSaleData")))),
-        
+                      mainPanel(leafletOutput("saleMap", height='600px'))
+                      )),
+                      fluidRow(splitLayout(cellWidths = c("2%","50%","2%","31%","10%"),
+                                           '',
+                                           div(DT::dataTableOutput("filteredRentData"), style='font-size:80%'),
+                                           '',
+                                           leafletOutput("rentMap", height='400px'),
+                                           ''
+                                           )
+                               )
+                    ),
            tabPanel("Viviendas de compra", DT::dataTableOutput("saleData")),
            tabPanel("Viviendas de alquiler", DT::dataTableOutput("rentData")),
            tabPanel("Información",includeMarkdown("readme_shiny.md")))

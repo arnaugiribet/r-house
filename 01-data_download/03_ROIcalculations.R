@@ -115,8 +115,8 @@ getSuggestedRentalPriceByArea <- function(dadesSale,i){
   dadesRent_i<-dadesRent_i[match(codes_5closest, dadesRent_i$propertyCode),]   #order them
 
   #find the mean price/m2
-  dadesSale_i$ReferencedRentals<-nrow(dadesRent_i)
-  dadesSale_i$NumReferencedRentals<-list(Map(c, dadesRent_i$propertyCode, dadesRent_i$url))
+  dadesSale_i$NumReferencedRentals<-nrow(dadesRent_i)
+  dadesSale_i$ReferencedRentals<-list(Map(c, dadesRent_i$propertyCode, dadesRent_i$url))
   dadesSale_i$SuggestedRentalPriceByArea<-mean(dadesRent_i$priceByArea)
   
   return(dadesSale_i)
@@ -161,5 +161,43 @@ if(sum(is.na(dadesSale$SuggestedRentalPrice))>0){
 }
 
 dadesSale[,ROIpct := 100*12*SuggestedRentalPrice/(price*1.15)]
+
+#a bit data preparation for plotting
+
+dadesSale[,ROIpct:= round(ROIpct,1)]
+dadesSale[,SuggestedRentalPrice:= round(SuggestedRentalPrice)]
+
+dadesSale[,url_html := paste('<a href = "',url,'"> Anuncio Idealista </a>',sep='')]
+dadesRent[,url_html := paste('<a href = "',url,'"> Anuncio Idealista </a>',sep='')]
+# new column for the popup label
+
+dadesSale <- mutate(dadesSale, cntnt=paste0('<strong>Localidad: </strong>',municipality,
+                                            '<br><strong>Rentabilidad: </strong>',paste(ROIpct,'%',sep=''),
+                                            '<br><strong>Precio:</strong> ', price,
+                                            '<br><strong>Precio por m2:</strong> ', priceByArea,
+                                            '<br><strong>Alquiler estimado:</strong> ', SuggestedRentalPrice,
+                                            '<br><strong>Tipo de propiedad:</strong> ',propertyType,
+                                            '<br><strong>m2:</strong> ',size,
+                                            '<br><strong>Habitaciones:</strong> ',rooms,
+                                            '<br><strong>Altura:</strong> ',floor,
+                                            '<br><strong>Ascensor:</strong> ',hasLift,
+                                            '<br><strong>Exterior:</strong> ',exterior,
+                                            '<br><strong>Estado:</strong> ',status,
+                                            '<br><strong>Dirección:</strong> ',address,
+                                            '<br><strong>Enlace:</strong> ',url_html))
+
+dadesRent <- mutate(dadesRent, cntnt=paste0('<strong>Localidad:</strong> ', municipality,
+                                            '<br><strong>Alquiler:</strong> ', price,
+                                            '<br><strong>Alquiler por m2:</strong> ', priceByArea,
+                                            '<br><strong>Tipo de propiedad:</strong> ',propertyType,
+                                            '<br><strong>m2:</strong> ',size,
+                                            '<br><strong>Habitaciones:</strong> ',rooms,
+                                            '<br><strong>Altura:</strong> ',floor,
+                                            '<br><strong>Ascensor:</strong> ',hasLift,
+                                            '<br><strong>Exterior:</strong> ',exterior,
+                                            '<br><strong>Estado:</strong> ',status,
+                                            '<br><strong>Dirección:</strong> ',address,
+                                            '<br><strong>Enlace:</strong> ',url_html))
+
 
 save(dadesRent,dadesSale,file='01-data_download/03dadesWithROI.RData')
