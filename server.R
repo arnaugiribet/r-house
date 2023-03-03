@@ -75,6 +75,9 @@ shinyServer(function(input, output) {
   observeEvent(input$saleMap_marker_click, {
     
     selectedProperty <- input$saleMap_marker_click$id
+    selectedLatitude <- input$saleMap_marker_click$lat
+    selectedLongitude <- input$saleMap_marker_click$lng
+    
     referencedProperties<- (dadesSale %>% 
                               filter(propertyCode == selectedProperty) %>% 
                               select(ReferencedRentals))[[1]][[1]] %>% lapply('[[',1) %>% unlist
@@ -94,13 +97,16 @@ shinyServer(function(input, output) {
                                       options=list(pageLength=-1,
                                                    dom='tr',
                                                    scrollX=T),
-                                      escape=FALSE)
+                                      escape=FALSE,
+                                      caption = htmltools::tags$caption("Pisos de alquiler parecidos con los que se calcula el alquiler estimado y su rentabilidad asociada.", 
+                                                                        style="text-align: center; font-weight: bold; color:black"),
+                                      selection = 'none')
     #table
     output$filteredRentData <-
       DT::renderDataTable(filteredRentDataOutput)
     
     #map
-    # leaflet Rent Data map
+    # leaflet filtered Rent Data map
     output$rentMap <- renderLeaflet({
 
       leaflet(filteredRentData) %>% 
@@ -109,23 +115,13 @@ shinyServer(function(input, output) {
         addCircleMarkers(data=filteredRentData,
                          lat =  ~latitude, lng =~longitude, layerId = ~propertyCode,
                          radius = 8, popup = ~as.character(cntnt), 
-                         #fillColor = ~pal(rentabilidad_grupo),
-                         stroke = T, color = "#C6E2E9", opacity=0.25, fillOpacity = 1) %>%
+                         fillColor = "#77ccff",
+                         stroke = T, color = "black", opacity=0.7, fillOpacity = 1) %>%
 
         addEasyButton(easyButton(
           icon="fa-crosshairs", title="ME",
           onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
-        setView(lng = 1.747969, lat = 41.912181, zoom=8) %>%
-        onRender("
-                     function(el, x) {
-                         this.on('popupopen', function(e) {
-                             Shiny.onInputChange('myEvent', 'open');
-                         });
-
-                         this.on('popupclose', function(e) {
-                             Shiny.onInputChange('myEvent', 'close');
-                         });
-                     }")
+        setView(lng = selectedLongitude, lat = selectedLatitude, zoom=10)
       
     })
     
@@ -162,13 +158,14 @@ shinyServer(function(input, output) {
                                                         'rooms','floor','hasLift',
                                                         'exterior','status','address','url')],
                                     filter = 'top',
-                                    colnames = c("Rentabilidad", "Precio", "Precio por m2",
+                                    colnames = c("Rentabilidad", "Precio", "Precio/m2",
                                                  "Alquiler estimado", "Tipo", "m2",
                                                  "Habitaciones","Altura","Ascensor",
                                                  "Exterior","Estado", "Dirección", "Enlace"),
                             options=list(pageLength=20,
                                          lengthMenu=c(10,20,50),
-                                         dom='ltr'))
+                                         dom='lptrp'),
+                            selection = 'none') 
   output$saleData <-
     DT::renderDataTable(saleDataOutput)
   
@@ -183,7 +180,8 @@ shinyServer(function(input, output) {
                  "Altura","Ascensor","Exterior","Estado", "Dirección", "Enlace"),
     options=list(pageLength=20,
                  lengthMenu=c(10,20,50),
-                 dom='ltir')))
+                 dom='lptrp'),
+    selection = 'none'))
   
   
   

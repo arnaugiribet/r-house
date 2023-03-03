@@ -49,13 +49,15 @@ navbarPage("Rentabilidad de pisos", id="main",
                       #Panel central
                       mainPanel(leafletOutput("saleMap", height='600px'))
                       )),
-                      fluidRow(splitLayout(cellWidths = c("2%","50%","2%","31%","10%"),
+                    fluidRow(p(''),
+                             splitLayout(cellWidths = c("2%","50%","2%","31%","10%"),
                                            '',
                                            div(DT::dataTableOutput("filteredRentData"), style='font-size:80%'),
                                            '',
                                            leafletOutput("rentMap", height='400px'),
                                            ''
-                                           )
+                                           ),
+                             p('')
                                )
                     ),
            tabPanel("Viviendas de compra", DT::dataTableOutput("saleData")),

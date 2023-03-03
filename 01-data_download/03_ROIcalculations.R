@@ -174,7 +174,7 @@ dadesRent[,url_html := paste('<a href = "',url,'"> Anuncio Idealista </a>',sep='
 dadesSale <- mutate(dadesSale, cntnt=paste0('<strong>Localidad: </strong>',municipality,
                                             '<br><strong>Rentabilidad: </strong>',paste(ROIpct,'%',sep=''),
                                             '<br><strong>Precio:</strong> ', price,
-                                            '<br><strong>Precio por m2:</strong> ', priceByArea,
+                                            '<br><strong>Precio/m2:</strong> ', priceByArea,
                                             '<br><strong>Alquiler estimado:</strong> ', SuggestedRentalPrice,
                                             '<br><strong>Tipo de propiedad:</strong> ',propertyType,
                                             '<br><strong>m2:</strong> ',size,
@@ -188,7 +188,7 @@ dadesSale <- mutate(dadesSale, cntnt=paste0('<strong>Localidad: </strong>',munic
 
 dadesRent <- mutate(dadesRent, cntnt=paste0('<strong>Localidad:</strong> ', municipality,
                                             '<br><strong>Alquiler:</strong> ', price,
-                                            '<br><strong>Alquiler por m2:</strong> ', priceByArea,
+                                            '<br><strong>Alquiler/m2:</strong> ', priceByArea,
                                             '<br><strong>Tipo de propiedad:</strong> ',propertyType,
                                             '<br><strong>m2:</strong> ',size,
                                             '<br><strong>Habitaciones:</strong> ',rooms,
