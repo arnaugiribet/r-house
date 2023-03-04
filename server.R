@@ -30,9 +30,9 @@ shinyServer(function(input, output) {
   map_dadesSale_react <- reactive({
     
     dadesSale %>% 
-      filter(price >= min(input$priceMinSelectInput,0,na.rm=T) &
+      filter(price >= max(input$priceMinSelectInput,0,na.rm=T) &
                            price <= min(input$priceMaxSelectInput,Inf,na.rm=T) &
-                           SuggestedRentalPrice >= min(input$rentMinSelectInput,0,na.rm=T) &
+                           SuggestedRentalPrice >= max(input$rentMinSelectInput,0,na.rm=T) &
                            SuggestedRentalPrice <= min(input$rentMaxSelectInput,Inf,na.rm=T)) %>% 
       filter(if(sum(unlist(input$statusSelectInput) != '')==0) TRUE else (status %in% input$statusSelectInput)) %>% #no check, no filter
       filter(if(sum(unlist(input$roiSelectInput) != '')==0) TRUE else (rentabilidad_grupo %in% input$roiSelectInput))
