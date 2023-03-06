@@ -130,7 +130,6 @@ getSuggestedRentalPriceByArea_Algorithm2 <- function(dadesSale_i,dadesRent,dista
     if(dadesSale_i$floorRevised >= 3) has_lift<-dadesSale_i$hasLift
     
     
-    
     #beginning of iteration within a distance
     iterationInDistance<-1
     while(numReferences<numReferencesNeeded & iterationInDistance<=5){

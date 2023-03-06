@@ -1,13 +1,13 @@
 name: rentabilidad
-title:
+title: rentabilidad
 username:
 account: agiribet
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8278752
-bundleId: 6911804
+bundleId: 6923225
 url: https://agiribet.shinyapps.io/rentabilidad/
-when: 1677852589.26992
-lastSyncTime: 1677852589.26996
+when: 1678140329.34812
+lastSyncTime: 1678140329.34813
 asMultiple: FALSE
 asStatic: FALSE
