@@ -53,7 +53,6 @@ shinyServer(function(input, output) {
       addTiles(urlTemplate = "http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", attribution = 'Google') %>%
       addLegend(colors=colors_vec,labels=color_labels, values= ~rentabilidad_grupo,opacity=1, na.label = "Not Available")%>%
       setView(lng = 1.747969, lat = 41.912181, zoom=8)
-        
         })
   
   #update map

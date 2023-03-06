@@ -40,7 +40,6 @@ suppressWarnings(dades[,floorRevised:=ifelse(floor %in%
                                                      as.numeric(floor),
                                                      2))])
 
-
 #divide into two datasets
 dadesSale<-dades[which(dades$operation=='sale'),]
 dadesRent<-dades[which(dades$operation=='rent'),]
@@ -100,8 +99,8 @@ dadesSale[,ROIpct:= round(ROIpct,1)]
 dadesSale[,ROIpct_15:= round(ROIpct_15,1)]
 dadesSale[,SuggestedRentalPrice:= round(SuggestedRentalPrice)]
 
-dadesSale[,url_html := paste('<a href = "',url,'"> Anuncio Idealista </a>',sep='')]
-dadesRent[,url_html := paste('<a href = "',url,'"> Anuncio Idealista </a>',sep='')]
+dadesSale[,url_html := paste('<a href = "',url,'" target = "_blank" > Anuncio Idealista </a>',sep='')]
+dadesRent[,url_html := paste('<a href = "',url,'" target = "_blank" > Anuncio Idealista </a>',sep='')]
 # new column for the popup label
 
 dadesSale <- mutate(dadesSale, cntnt=paste0('<strong>Localidad: </strong>',municipality,

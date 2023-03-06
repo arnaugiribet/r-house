@@ -5,9 +5,9 @@ account: agiribet
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8278752
-bundleId: 6923225
+bundleId: 6923379
 url: https://agiribet.shinyapps.io/rentabilidad/
-when: 1678140329.34812
-lastSyncTime: 1678140329.34813
+when: 1678142750.17342
+lastSyncTime: 1678142750.17342
 asMultiple: FALSE
 asStatic: FALSE
