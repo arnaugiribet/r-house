@@ -28,15 +28,8 @@ shinyServer(function(input, output) {
   
   
   #filter data appearing on the map
-  map_dadesSale_base <- 
+  map_dadesSale_base <- dadesSale
     
-    dadesSale %>% 
-      filter(price >= 0 &
-               price <= 100000 &
-               SuggestedRentalPrice >= 0 &
-               SuggestedRentalPrice <= Inf)
-    
-  
   
   #filter data appearing on the map
   map_dadesSale_react <- reactive({

@@ -19,7 +19,7 @@ navbarPage("Rentabilidad de pisos", id="main",
                                             column(6, #Preu max
                                                    numericInput("priceMaxSelectInput",
                                                                 "Precio Máx.",
-                                                                value = 100000, min=0, max=100000, step=10000))),
+                                                                value = NA, min=0, max=100000, step=10000))),
                                    
                                    fluidRow(column(6, # Preu mín
                                                    numericInput("rentMinSelectInput",
