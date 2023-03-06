@@ -2,6 +2,11 @@
 
 Repo for a real estate investing platform.
 
+
+See it in action here:
+
+[ShinyApp - Rentabilidad](https://agiribet.shinyapps.io/rentabilidad/)
+
 ## Getting Started
 
 ### Dependencies
