@@ -17,14 +17,26 @@ shinyServer(function(input, output) {
   dadesSale[,rentabilidad_grupo:= as.character(cut(ROIpct,value_labels, labels=color_labels))] #important que sigui character
   
   #filtering some wrong ones
-  lowers10<-(!dadesSale$rentabilidad_grupo %in% c('10-12%'))
-  lowers12<-(!dadesSale$rentabilidad_grupo %in% c('Superior al 12%'))
-  dadesSale<-dadesSale[c(which(lowers10 & lowers12),which(!lowers10)[1:25], which(!lowers12)[1:25]),]
+  # lowers10<-(!dadesSale$rentabilidad_grupo %in% c('10-12%'))
+  # lowers12<-(!dadesSale$rentabilidad_grupo %in% c('Superior al 12%'))
+  # dadesSale<-dadesSale[c(which(lowers10 & lowers12),which(!lowers10)[1:25], which(!lowers12)[1:25]),]
   
   # create a color palette for category type in the data file
   colors_vec<-c('#FF625E','#FFBE65','#F5EEA5', '#D2FDBB', '#77DD76' ,'#0CC078')
   pal <- colorFactor(palette = colors_vec,
                      levels = color_labels)
+  
+  
+  #filter data appearing on the map
+  map_dadesSale_base <- 
+    
+    dadesSale %>% 
+      filter(price >= 0 &
+               price <= 100000 &
+               SuggestedRentalPrice >= 0 &
+               SuggestedRentalPrice <= Inf)
+    
+  
   
   #filter data appearing on the map
   map_dadesSale_react <- reactive({
@@ -42,21 +54,28 @@ shinyServer(function(input, output) {
   # leaflet Sale Data map
   output$saleMap <- renderLeaflet({
     
-    dadesSaleLeaflet <- map_dadesSale_react()
+    dadesSaleLeaflet <- map_dadesSale_base
     
       leaflet(dadesSaleLeaflet) %>% 
-      addCircles(lng = ~longitude, lat = ~latitude) %>% 
       addTiles(urlTemplate = "http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", attribution = 'Google') %>%
-      addCircleMarkers(data=dadesSaleLeaflet,
-                       lat =  ~latitude, lng =~longitude, layerId = ~propertyCode,
-                       radius = 8, popup = ~as.character(cntnt), 
-                       fillColor = ~pal(rentabilidad_grupo),
-                       stroke = T, color = "black", opacity=0.25, fillOpacity = 1)%>%
       addLegend(colors=colors_vec,labels=color_labels, values= ~rentabilidad_grupo,opacity=1, na.label = "Not Available")%>%
-      addEasyButton(easyButton(
-        icon="fa-crosshairs", title="ME",
-        onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
-      setView(lng = 1.747969, lat = 41.912181, zoom=8) %>%
+      setView(lng = 1.747969, lat = 41.912181, zoom=8)
+        
+        })
+  
+  #update map
+  observe({
+    # update map
+      dadesSaleLeaflet <- map_dadesSale_react()
+
+      leafletProxy('saleMap',data=dadesSaleLeaflet) %>%
+        clearMarkerClusters() %>% clearMarkers() %>% clearShapes() %>%
+        addCircles(lng = ~longitude, lat = ~latitude) %>%
+        addCircleMarkers(data=dadesSaleLeaflet,
+                         lat =  ~latitude, lng =~longitude, layerId = ~propertyCode,
+                         radius = 8, popup = ~as.character(cntnt),
+                         fillColor = ~pal(rentabilidad_grupo),
+                         stroke = T, color = "black", opacity=0.25, fillOpacity = 1)%>%
         onRender("
                      function(el, x) {
                          this.on('popupopen', function(e) {
@@ -67,8 +86,9 @@ shinyServer(function(input, output) {
                              Shiny.onInputChange('myEvent', 'close');
                          });
                      }")
-        
-        })
+
+  })
+  
   
   #display Filtered Referenced Rent data when user selects a property for sale
   
@@ -80,17 +100,22 @@ shinyServer(function(input, output) {
     
     referencedProperties<- (dadesSale %>% 
                               filter(propertyCode == selectedProperty) %>% 
-                              select(ReferencedRentals))[[1]][[1]] %>% lapply('[[',1) %>% unlist
+                              select(ReferencedRentals)) %>% unlist
+    distanceToProperty<- (dadesSale %>% 
+                             filter(propertyCode == selectedProperty) %>% 
+                             select(ReferencedRentalsDistance)) %>% unlist
     
-    filteredRentData<-dadesRent  %>% filter(propertyCode %in% referencedProperties)
     
+    filteredRentData<-dadesRent  %>% filter(propertyCode %in% referencedProperties) #filtro rentals
+    filteredRentData<-filteredRentData[order(match(filteredRentData$propertyCode,referencedProperties)),] #ordeno
+    filteredRentData$distanceToProperty<-distanceToProperty*1000
     
-    filteredRentDataOutput<-datatable(filteredRentData[,c('municipality','price','priceByArea',
+    filteredRentDataOutput<-datatable(filteredRentData[,c('municipality','distanceToProperty','price','priceByArea',
                                                                 'propertyType','size',
                                                                 'rooms','floor','hasLift',
                                                                 'exterior','status','url_html')],
                                       filter = 'none',
-                                      colnames = c("Localidad","Alquiler", "Alquiler/m2",
+                                      colnames = c("Localidad","Distancia (m)","Alquiler", "Alquiler/m2",
                                                    "Tipo", "m2",
                                                    "Habitaciones","Altura","Ascensor",
                                                    "Exterior","Estado", "Enlace"),
@@ -117,10 +142,6 @@ shinyServer(function(input, output) {
                          radius = 8, popup = ~as.character(cntnt), 
                          fillColor = "#77ccff",
                          stroke = T, color = "black", opacity=0.7, fillOpacity = 1) %>%
-
-        addEasyButton(easyButton(
-          icon="fa-crosshairs", title="ME",
-          onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
         setView(lng = selectedLongitude, lat = selectedLatitude, zoom=10)
       
     })
@@ -144,21 +165,15 @@ shinyServer(function(input, output) {
     output$rentMap<-NULL
   })
   
-  
-  
-  
-  
-  
-  
   ##### PESTANYA 2
   
   #display Sale data
-  saleDataOutput<-datatable(dadesSale[,c('ROIpct','price','priceByArea',
+  saleDataOutput<-datatable(dadesSale[,c('ROIpct','ROIpct_15','price','priceByArea',
                                                         'SuggestedRentalPrice','propertyType','size',
                                                         'rooms','floor','hasLift',
                                                         'exterior','status','address','url')],
                                     filter = 'top',
-                                    colnames = c("Rentabilidad", "Precio", "Precio/m2",
+                                    colnames = c("Rentabilidad", 'Rentabilidad (Precio+15%)',"Precio", "Precio/m2",
                                                  "Alquiler estimado", "Tipo", "m2",
                                                  "Habitaciones","Altura","Ascensor",
                                                  "Exterior","Estado", "Dirección", "Enlace"),

@@ -12,6 +12,9 @@ source('01-data_download/algorithms_and_functions.R')
 setDT(dades)
 #clean data
 if(sum(dades$status=='')>0) dades$status[which(dades$status=='')] <-'good'
+duplicats<-duplicated(dades[,c('price','municipality','address','rooms')])
+if(sum(duplicats)>0) dades<-dades[-which(duplicats),]
+rm(duplicats)
 
 #create accessory variables
 dades<-dades %>% filter(propertyType %in% c('flat','studio','penthouse','duplex') &
@@ -72,8 +75,8 @@ dadesSaleROI <- foreach(i = 1:iterations, .combine = rbind, .packages='foreach',
     getSuggestedRentalPriceByArea_Algorithm2(dadesSale[i,],
                                              dadesRent,
                                              distancesMatrix=distancesMatrix[i,],
-                                             numReferencesNeeded = 5,
-                                             numReferencesMax = 10)
+                                             numReferencesNeeded = 4,
+                                             numReferencesMax = 6)
   }
 
 
@@ -107,8 +110,9 @@ dadesSale <- mutate(dadesSale, cntnt=paste0('<strong>Localidad: </strong>',munic
                                             '<br><strong>Precio:</strong> ', price,
                                             '<br><strong>Precio/m2:</strong> ', priceByArea,
                                             '<br><strong>Alquiler estimado:</strong> ', SuggestedRentalPrice,
-                                            '<br><strong>Tipo de propiedad:</strong> ',propertyType,
+                                            '<br><strong>Alquiler/m2 estimado:</strong> ', round(SuggestedRentalPriceByArea,1),
                                             '<br><strong>m2:</strong> ',size,
+                                            '<br><strong>Tipo de propiedad:</strong> ',propertyType,
                                             '<br><strong>Habitaciones:</strong> ',rooms,
                                             '<br><strong>Altura:</strong> ',floor,
                                             '<br><strong>Ascensor:</strong> ',hasLift,

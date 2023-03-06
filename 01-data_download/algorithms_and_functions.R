@@ -99,7 +99,7 @@ getSuggestedRentalPriceByArea_Algorithm1 <- function(dadesSale_i){
   return(dadesSale_i)
 }
 
-getSuggestedRentalPriceByArea_Algorithm2 <- function(dadesSale_i,dadesRent,distancesMatrix_i,numReferencesNeeded=5, numReferencesMax=10){
+getSuggestedRentalPriceByArea_Algorithm2 <- function(dadesSale_i,dadesRent,distancesMatrix_i,numReferencesNeeded=5, numReferencesMax=8){
   
   max_distances<-c(100,250,500,1000,2500,5000)/1000
   
@@ -204,28 +204,60 @@ getSuggestedRentalPriceByArea_Algorithm2 <- function(dadesSale_i,dadesRent,dista
     
   }
   
+  #if we are short some references, we just get the closest one
   if(numReferences<numReferencesNeeded){
     whichReferences<-unique(c(whichReferences,order(distancesMatrix_i)[1:numReferencesMax]))
     numReferences<-length(whichReferences)
   }
   
+  #if the distance gets bigger quickly, we filter those out
+  #currently: the distance to the second is the reference - because the first could closely lucky
+  # we cut those which are bigger than 5 times the distance
+  whichReferences<-whichReferences[order(distancesMatrix_i[whichReferences])] #order by distance
+  distancesReferences<-distancesMatrix_i[whichReferences] #save distance
+  w_keep<-which(distancesReferences/distancesReferences[2]<=5)
+  whichReferences<-whichReferences[w_keep]
+  distancesReferences<-distancesReferences[w_keep]
+  numReferences<-length(whichReferences)
+  
+  #if still too many, we cut to the Max Number established in the beginning
   whichReferences<-whichReferences[1:min(numReferencesMax,numReferences)]
   numReferences<-length(whichReferences)
+  distancesReferences<-distancesReferences[1:length(whichReferences)]
+  
+  #filter rent dataset
   dadesRent_i<-dadesRent[whichReferences,]
   dadesRent_i$distanceToProperty<-distancesMatrix_i[whichReferences]
   #View(dadesRent_i[,c('floor','price','priceByArea','propertyType','size','exterior','rooms','distanceToProperty')])
 
-  #find the mean price/m2
+  
+  #Return New Columns
   dadesSale_i$NumReferencedRentals<-numReferences
   dadesSale_i$ReferencedRentals<-list(dadesRent_i$propertyCode)
-  #weighted mean
+  dadesSale_i$ReferencedRentalsDistance<-list(dadesRent_i$distanceToProperty)
   
+  #find the mean price/m2
+  
+  #two step algorithm:
+  #if the size of the flat exceeds every one of our referenced ones, we set boundaries on the price/m2
+  
+  
+  ## weighted mean by price/area
   if(dadesSale_i$size>mean(dadesRent_i$size)){
     dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$priceByArea,w=dadesRent_i$size)
   }
   
   if(dadesSale_i$size<=mean(dadesRent_i$size)){
     dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$priceByArea,w=1/dadesRent_i$size)
+  }
+  
+  ## we correct the suggested price/m2 in case the size is either extremely big or small
+  if(sum(dadesSale_i$size>dadesRent_i$size)>=nrow(dadesRent_i)*0.85){
+    dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$price,w=dadesRent_i$distanceToProperty)/dadesSale_i$size
+  }
+  
+  if(sum(dadesSale_i$size<dadesRent_i$size)<=nrow(dadesRent_i)*0.85){
+    dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$price,w=dadesRent_i$distanceToProperty)/dadesSale_i$size
   }
   
   return(dadesSale_i)
