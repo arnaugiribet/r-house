@@ -1,44 +1,72 @@
 
 rm(list=ls())
 
-#load data, libraries and functions
-load('01-data_download/dades.RData')
+#LOAD DATA, LIBRARIES AND FUNCTIONS
+library('readxl')
+dades <- read_excel("01-data_download/01_output_idealista_properties.xlsx")
 library('data.table')
-library(foreach)
+library('foreach')
 library('dplyr')
-library(doSNOW)
+library('doSNOW')
 source('01-data_download/algorithms_and_functions.R')
 
+#DATA CLEANING
 setDT(dades)
 #clean data
 if(sum(dades$status=='')>0) dades$status[which(dades$status=='')] <-'good'
+duplicats<-duplicated(dades$propertyCode)
+if(sum(duplicats)>0) dades<-dades[-which(duplicats),]
 duplicats<-duplicated(dades[,c('price','municipality','address','rooms')])
 if(sum(duplicats)>0) dades<-dades[-which(duplicats),]
 rm(duplicats)
 
 #create accessory variables
-dades<-dades %>% filter(propertyType %in% c('flat','studio','penthouse','duplex') &
-                          size <= 500)
-
 dades$statusRevised<-fifelse(dades$status=='newdevelopment','good',dades$status)
 dades[,lat_radians:=latitude/(180/pi)]
 dades[,lon_radians:=longitude/(180/pi)]
 
 dades[,floor:=gsub(' ','',floor)]
 dades[,floorEsp:=fifelse(floor %in% c(-1:-100,'ss','st'),
-                         'Sot.',
+                         'Sót.',
                          fifelse(floor %in% c('bj','en'),
                                  'Bj/En',
                                  fifelse(floor=='',
                                          'No Informado',
                                          floor)))]
 
-suppressWarnings(dades[,floorRevised:=ifelse(floor %in% 
-                                               c(-1:-100,'ss','bj','en','0','st'),
-                                             0,
-                                             fifelse(floor!='',
-                                                     as.numeric(floor),
-                                                     2))])
+dades$floorRevised<-NA
+dades$floorRevised[which(dades$floor %in% c(-1:-100,'ss','bj','en','0','st'))]<-0
+dades$floorRevised[which(is.na(dades$floor))]<-2
+dades$floorRevised[which(is.na(dades$floorRevised))]<-as.numeric(dades$floor[which(is.na(dades$floorRevised))])
+
+dades[,propertyTypeEsp:=fifelse(propertyType == 'flat',
+                         'Piso',
+                         fifelse(propertyType == 'duplex',
+                                 'Dúplex',
+                                 fifelse(propertyType=='penthouse',
+                                         'Ático',
+                                         fifelse(propertyType=='studio',
+                                                 'Estudio',
+                                                 NA_character_))))]
+dades[,exteriorEsp:=fifelse(exterior == 'True',
+                            'Exterior',
+                            fifelse(exterior == 'False',
+                                        'Interior',
+                                    NA_character_))]
+
+dades[,statusEsp:=fifelse(status == 'good',
+                          'Buen Estado',
+                          fifelse(status == 'newdevelopment',
+                                  'Obra Nueva',
+                                  fifelse(status == 'renew',
+                                          'A Reformar',
+                                          NA_character_)))]
+
+dades[,hasLiftEsp:=fifelse(hasLift == 'True',
+                          'Sí',
+                          fifelse(hasLift == 'False',
+                                  'No',
+                                  NA_character_))]
 
 #divide into two datasets
 dadesSale<-dades[which(dades$operation=='sale'),]
@@ -74,7 +102,7 @@ dadesSaleROI <- foreach(i = 1:iterations, .combine = rbind, .packages='foreach',
     getSuggestedRentalPriceByArea_Algorithm2(dadesSale[i,],
                                              dadesRent,
                                              distancesMatrix=distancesMatrix[i,],
-                                             numReferencesNeeded = 4,
+                                             numReferencesNeeded = 3,
                                              numReferencesMax = 6)
   }
 
@@ -103,6 +131,7 @@ dadesSale[,url_html := paste('<a href = "',url,'" target = "_blank" > Anuncio Id
 dadesRent[,url_html := paste('<a href = "',url,'" target = "_blank" > Anuncio Idealista </a>',sep='')]
 # new column for the popup label
 
+options(scipen=999)
 dadesSale <- mutate(dadesSale, cntnt=paste0('<strong>Localidad: </strong>',municipality,
                                             '<br><strong>Rentabilidad: </strong>',paste(ROIpct,'%',sep=''),
                                             '<br><strong>Rentabilidad (precio+15%): </strong>',paste(ROIpct_15,'%',sep=''),
@@ -111,25 +140,26 @@ dadesSale <- mutate(dadesSale, cntnt=paste0('<strong>Localidad: </strong>',munic
                                             '<br><strong>Alquiler estimado:</strong> ', SuggestedRentalPrice,
                                             '<br><strong>Alquiler/m2 estimado:</strong> ', round(SuggestedRentalPriceByArea,1),
                                             '<br><strong>m2:</strong> ',size,
-                                            '<br><strong>Tipo de propiedad:</strong> ',propertyType,
+                                            '<br><strong>Tipo de propiedad:</strong> ',propertyTypeEsp,
                                             '<br><strong>Habitaciones:</strong> ',rooms,
-                                            '<br><strong>Altura:</strong> ',floor,
-                                            '<br><strong>Ascensor:</strong> ',hasLift,
-                                            '<br><strong>Exterior:</strong> ',exterior,
-                                            '<br><strong>Estado:</strong> ',status,
+                                            '<br><strong>Altura:</strong> ',floorEsp,
+                                            '<br><strong>Ascensor:</strong> ',hasLiftEsp,
+                                            '<br><strong>Exterior/Interior:</strong> ',exteriorEsp,
+                                            '<br><strong>Estado:</strong> ',statusEsp,
                                             '<br><strong>Dirección:</strong> ',address,
                                             '<br><strong>Enlace:</strong> ',url_html))
 
-dadesRent <- mutate(dadesRent, cntnt=paste0('<strong>Localidad:</strong> ', municipality,
+dadesRent <- mutate(dadesRent, cntnt=paste0('<strong>Piso de referencia de alquiler</strong>',
+                                            '<br><strong>Localidad:</strong> ', municipality,
                                             '<br><strong>Alquiler:</strong> ', price,
                                             '<br><strong>Alquiler/m2:</strong> ', priceByArea,
-                                            '<br><strong>Tipo de propiedad:</strong> ',propertyType,
+                                            '<br><strong>Tipo de propiedad:</strong> ',propertyTypeEsp,
                                             '<br><strong>m2:</strong> ',size,
                                             '<br><strong>Habitaciones:</strong> ',rooms,
-                                            '<br><strong>Altura:</strong> ',floor,
-                                            '<br><strong>Ascensor:</strong> ',hasLift,
-                                            '<br><strong>Exterior:</strong> ',exterior,
-                                            '<br><strong>Estado:</strong> ',status,
+                                            '<br><strong>Altura:</strong> ',floorEsp,
+                                            '<br><strong>Ascensor:</strong> ',hasLiftEsp,
+                                            '<br><strong>Exterior:</strong> ',exteriorEsp,
+                                            '<br><strong>Estado:</strong> ',statusEsp,
                                             '<br><strong>Dirección:</strong> ',address,
                                             '<br><strong>Enlace:</strong> ',url_html))
 

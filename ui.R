@@ -15,11 +15,11 @@ navbarPage("Rentabilidad de pisos", id="main",
                                    fluidRow(column(6, # Preu mín
                                                    numericInput("priceMinSelectInput",
                                                                 "Precio Mín.",
-                                                                value = 0, min=0, max=100000, step=10000)),
+                                                                value = 0, min=0, max=300000, step=10000)),
                                             column(6, #Preu max
                                                    numericInput("priceMaxSelectInput",
                                                                 "Precio Máx.",
-                                                                value = NA, min=0, max=100000, step=10000))),
+                                                                value = NA, min=0, max=300000, step=10000))),
                                    
                                    fluidRow(column(6, # Preu mín
                                                    numericInput("rentMinSelectInput",
@@ -33,11 +33,11 @@ navbarPage("Rentabilidad de pisos", id="main",
                                    fluidRow(column(6, #Size min
                                                    numericInput("sizeMinSelectInput",
                                                                 "Tamaño Mín.",
-                                                                value = 0, min=0, max=9999, step=10)),
+                                                                value = 0, min=0, max=250, step=10)),
                                             column(6, #Size max
                                                    numericInput("sizeMaxSelectInput",
                                                                 "Tamaño Máx.",
-                                                                value = NA, min=0, max=9999, step=10))),
+                                                                value = NA, min=0, max=250, step=10))),
                                    fluidRow(column(12, # Estado
                                                    checkboxGroupInput("statusSelectInput",
                                                                       "Estado",

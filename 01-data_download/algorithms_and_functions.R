@@ -101,7 +101,7 @@ getSuggestedRentalPriceByArea_Algorithm1 <- function(dadesSale_i){
 
 getSuggestedRentalPriceByArea_Algorithm2 <- function(dadesSale_i,dadesRent,distancesMatrix_i,numReferencesNeeded=5, numReferencesMax=8){
   
-  max_distances<-c(100,250,500,1000,2500,5000)/1000
+  max_distances<-c(100,250,500,1000,2500)/1000
   
   # The algorithm begins at a 100m radius and searches for those most similar.
   # Then it softens a bit the similarity paremeters.
@@ -120,75 +120,86 @@ getSuggestedRentalPriceByArea_Algorithm2 <- function(dadesSale_i,dadesRent,dista
     print(paste('Distance:',max_distance))
     
     #Similarity parameters initialization for every new distance radius
-    size_min<-max(dadesSale_i$size-10,0)
+    size_min<-max(dadesSale_i$size-10,0) #size +-10
     size_max<-dadesSale_i$size+10
-    floor_min<-dadesSale_i$floorRevised
+    floor_min<-dadesSale_i$floorRevised #floor = floor
     floor_max<-floor_min
-    rooms_min<-dadesSale_i$rooms
+    rooms_min<-dadesSale_i$rooms #nrooms = nrooms
     rooms_max<-rooms_min
-    has_lift<-c('True','False')
-    if(dadesSale_i$floorRevised >= 3) has_lift<-dadesSale_i$hasLift
+    has_lift<-c('True','False') #lift doesn't matter if floor<3
+    if(dadesSale_i$floorRevised >= 3) has_lift<-dadesSale_i$hasLift #lift=lift if floor > 3
     
     
     #beginning of iteration within a distance
     iterationInDistance<-1
-    while(numReferences<numReferencesNeeded & iterationInDistance<=5){
+    while(numReferences<numReferencesNeeded & iterationInDistance<=6){
 
       whichReferences_it<-which(distancesMatrix_i<max_distance & 
                                   dplyr::between(dadesRent$size,size_min,size_max) &
                                   dplyr::between(dadesRent$floorRevised,floor_min,floor_max) &
                                   dplyr::between(dadesRent$rooms,rooms_min,rooms_max) &
-                                  dadesRent$hasLift==has_lift)
+                                  dadesRent$hasLift %in% has_lift)
       
       whichReferences<-unique(c(whichReferences,whichReferences_it))
       numReferences<-length(whichReferences)
-      
+      print(iterationInDistance)
       #changes for next iteration inside the same distance
       iterationInDistance<-iterationInDistance+1
       
       #REGARDLESS OF DISTANCE
-      #size 1
       
+      #size +- 20
       if(iterationInDistance==2 & iterationOutsideDistance>=1){
         size_min<-max(size_min-10,0)
         size_max<-size_max+10
       }
       
-      #floor 1
+      #floor +- 1
       if(iterationInDistance==3 & iterationOutsideDistance>=1){
         floor_min<-max(floor_min-1,0)
         floor_max<-floor_max+1
       }
       
-      #rooms 1
+      #rooms +-1
       if(iterationInDistance==3 & iterationOutsideDistance>=1){
         rooms_min<-max(rooms_min-1,0)
         rooms_max<-rooms_max+1
       }
       
+      #size +-30
       if(iterationInDistance==3 & iterationOutsideDistance>=1){
         size_min<-max(size_min-10,0)
         size_max<-size_max+10
       }
     
+      #rooms +-2
       if(iterationInDistance==4 & iterationOutsideDistance>=1){
         rooms_min<-max(rooms_min-1,0)
         rooms_min<-rooms_max+1
       }
       
+      #floor +-2
       if(iterationInDistance==5 & iterationOutsideDistance>=1){
         floor_min<-max(floor_min-1,0)
         floor_max<-floor_max+1
       }
       
-      #DISTANCE[3]
-      #floor 3
+      #lift doesn't matter
+      if(iterationInDistance==6 & iterationOutsideDistance>=1){
+        has_lift<-c('True','False')
+      }
+      
+      
+      
+      #if DISTANCE>=500
+      
+      #floor +-2
       if(iterationInDistance==3 & iterationOutsideDistance>=3){
         floor_min<-max(floor_min-1,0)
         floor_max<-floor_max+1
       }
       
-      #size 3
+      #size +-40
       if(iterationInDistance==3 & iterationOutsideDistance>=3){
         size_min<-max(size_min-10,0)
         size_max<-size_max+10
@@ -203,61 +214,82 @@ getSuggestedRentalPriceByArea_Algorithm2 <- function(dadesSale_i,dadesRent,dista
     
   }
   
-  #if we are short some references, we just get the closest one
-  if(numReferences<numReferencesNeeded){
-    whichReferences<-unique(c(whichReferences,order(distancesMatrix_i)[1:numReferencesMax]))
+  #if we are short some references, we just get the closest ones we had discarded
+  if(numReferences==0){
+    dadesSale_i$NumReferencedRentals<-0
+    dadesSale_i$ReferencedRentals<-NA
+    dadesSale_i$ReferencedRentalsDistance<-NA
+    dadesSale_i$SuggestedRentalPriceByArea<-NA
+  }
+  
+  if(numReferences>0){
+    if(numReferences<numReferencesNeeded){
+      whichReferences<-unique(c(whichReferences,order(distancesMatrix_i)[1:numReferencesMax]))
+      numReferences<-length(whichReferences)
+    }
+    
+    #if the distance gets bigger quickly, we filter those out
+    #currently: the distance to the first rental is the reference
+    # we cut those which are bigger than 5 times the distance
+    whichReferences<-whichReferences[order(distancesMatrix_i[whichReferences])] #order by distance
+    distancesReferences<-distancesMatrix_i[whichReferences] #save distance
+    
+    if(distancesReferences[1]==0) distancesReferences[1]<-0.001 #si el mateix anunci està publicat en venda i lloguer
+    
+    #if the first is in the 2000 km radius, we keep those closer than 5*dist[1]
+    if(distancesReferences[1]<2000){
+      w_keep<-which((distancesReferences/distancesReferences[1])<=5)
+    }
+    #if the first is outside the 2000 km radius, we keep those closer than 5*dist[2]
+    if(distancesReferences[1]>=2000){
+      w_keep<-which((distancesReferences/distancesReferences[1])<=2)
+    }
+    
+    whichReferences<-whichReferences[w_keep]
+    distancesReferences<-distancesReferences[w_keep]
     numReferences<-length(whichReferences)
+    
+    #if still too many, we cut to the Max Number established in the beginning
+    whichReferences<-whichReferences[1:min(numReferencesMax,numReferences)]
+    numReferences<-length(whichReferences)
+    distancesReferences<-distancesReferences[1:length(whichReferences)]
+    
+    #filter rent dataset
+    dadesRent_i<-dadesRent[whichReferences,]
+    dadesRent_i$distanceToProperty<-distancesMatrix_i[whichReferences]
+    #View(dadesRent_i[,c('floor','price','priceByArea','propertyType','size','exterior','rooms','distanceToProperty')])
+    
+    
+    #Return New Columns
+    dadesSale_i$NumReferencedRentals<-numReferences
+    dadesSale_i$ReferencedRentals<-list(dadesRent_i$propertyCode)
+    dadesSale_i$ReferencedRentalsDistance<-list(dadesRent_i$distanceToProperty)
+    
+    #find the mean price/m2
+    
+    #two step algorithm:
+    #if the size of the flat exceeds every one of our referenced ones, we set boundaries on the price/m2
+    
+    
+    ## weighted mean by price/area
+    if(dadesSale_i$size>mean(dadesRent_i$size)){
+      dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$priceByArea,w=dadesRent_i$size)
+    }
+    
+    if(dadesSale_i$size<=mean(dadesRent_i$size)){
+      dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$priceByArea,w=1/dadesRent_i$size)
+    }
+    
+    ## we correct the suggested price/m2 in case the size is either extremely big or small
+    if(sum(dadesSale_i$size>dadesRent_i$size)>=nrow(dadesRent_i)*0.85){
+      dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$price,w=dadesRent_i$distanceToProperty)/dadesSale_i$size
+    }
+    
+    if(sum(dadesSale_i$size<dadesRent_i$size)<=nrow(dadesRent_i)*0.85){
+      dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$price,w=dadesRent_i$distanceToProperty)/dadesSale_i$size
+    }
   }
   
-  #if the distance gets bigger quickly, we filter those out
-  #currently: the distance to the second is the reference - because the first could closely lucky
-  # we cut those which are bigger than 5 times the distance
-  whichReferences<-whichReferences[order(distancesMatrix_i[whichReferences])] #order by distance
-  distancesReferences<-distancesMatrix_i[whichReferences] #save distance
-  w_keep<-which(distancesReferences/distancesReferences[2]<=5)
-  whichReferences<-whichReferences[w_keep]
-  distancesReferences<-distancesReferences[w_keep]
-  numReferences<-length(whichReferences)
-  
-  #if still too many, we cut to the Max Number established in the beginning
-  whichReferences<-whichReferences[1:min(numReferencesMax,numReferences)]
-  numReferences<-length(whichReferences)
-  distancesReferences<-distancesReferences[1:length(whichReferences)]
-  
-  #filter rent dataset
-  dadesRent_i<-dadesRent[whichReferences,]
-  dadesRent_i$distanceToProperty<-distancesMatrix_i[whichReferences]
-  #View(dadesRent_i[,c('floor','price','priceByArea','propertyType','size','exterior','rooms','distanceToProperty')])
-
-  
-  #Return New Columns
-  dadesSale_i$NumReferencedRentals<-numReferences
-  dadesSale_i$ReferencedRentals<-list(dadesRent_i$propertyCode)
-  dadesSale_i$ReferencedRentalsDistance<-list(dadesRent_i$distanceToProperty)
-  
-  #find the mean price/m2
-  
-  #two step algorithm:
-  #if the size of the flat exceeds every one of our referenced ones, we set boundaries on the price/m2
-  
-  
-  ## weighted mean by price/area
-  if(dadesSale_i$size>mean(dadesRent_i$size)){
-    dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$priceByArea,w=dadesRent_i$size)
-  }
-  
-  if(dadesSale_i$size<=mean(dadesRent_i$size)){
-    dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$priceByArea,w=1/dadesRent_i$size)
-  }
-  
-  ## we correct the suggested price/m2 in case the size is either extremely big or small
-  if(sum(dadesSale_i$size>dadesRent_i$size)>=nrow(dadesRent_i)*0.85){
-    dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$price,w=dadesRent_i$distanceToProperty)/dadesSale_i$size
-  }
-  
-  if(sum(dadesSale_i$size<dadesRent_i$size)<=nrow(dadesRent_i)*0.85){
-    dadesSale_i$SuggestedRentalPriceByArea<-weighted.mean(dadesRent_i$price,w=dadesRent_i$distanceToProperty)/dadesSale_i$size
-  }
   
   return(dadesSale_i)
   

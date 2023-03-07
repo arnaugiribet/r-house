@@ -9,7 +9,7 @@ shinyServer(function(input, output) {
   
   # Import Data and clean it
   load('01-data_download/03dadesWithROI.RData')
-  
+  options(scipen=999)
   #grouping for plotting
   value_labels<-c(-Inf,6,8,9,10,12,Inf)
   color_labels<-c('Inferior al 6%','6-8%','8-9%','9-10%','10-12%','Superior al 12%')
@@ -25,7 +25,6 @@ shinyServer(function(input, output) {
   colors_vec<-c('#FF625E','#FFBE65','#F5EEA5', '#D2FDBB', '#77DD76' ,'#0CC078')
   pal <- colorFactor(palette = colors_vec,
                      levels = color_labels)
-  
   
   #filter data appearing on the map
   map_dadesSale_base <- dadesSale
@@ -102,15 +101,19 @@ shinyServer(function(input, output) {
     filteredRentData<-filteredRentData[order(match(filteredRentData$propertyCode,referencedProperties)),] #ordeno
     filteredRentData$distanceToProperty<-distanceToProperty*1000
     
+    #afegir el de referència també
+    rowSelectedSale<-dadesSale[propertyCode==selectedProperty,]
+
+    
     filteredRentDataOutput<-datatable(filteredRentData[,c('municipality','distanceToProperty','price','priceByArea',
-                                                                'propertyType','size',
-                                                                'rooms','floor','hasLift',
-                                                                'exterior','status','url_html')],
+                                                                'propertyTypeEsp','size',
+                                                                'rooms','floorEsp','hasLiftEsp',
+                                                                'exteriorEsp','statusEsp','url_html')],
                                       filter = 'none',
                                       colnames = c("Localidad","Distancia (m)","Alquiler", "Alquiler/m2",
                                                    "Tipo", "m2",
                                                    "Habitaciones","Altura","Ascensor",
-                                                   "Exterior","Estado", "Enlace"),
+                                                   "Exterior/Interior","Estado", "Enlace"),
                                       options=list(pageLength=-1,
                                                    dom='tr',
                                                    scrollX=T),
@@ -118,6 +121,9 @@ shinyServer(function(input, output) {
                                       caption = htmltools::tags$caption("Pisos de alquiler parecidos con los que se calcula el alquiler estimado y su rentabilidad asociada.", 
                                                                         style="text-align: center; font-weight: bold; color:black"),
                                       selection = 'none')
+    
+    
+    
     #table
     output$filteredRentData <-
       DT::renderDataTable(filteredRentDataOutput)
@@ -137,6 +143,24 @@ shinyServer(function(input, output) {
         setView(lng = selectedLongitude, lat = selectedLatitude, zoom=10)
       
     })
+    
+    observe({
+      # update map
+      
+     
+      
+      #rbind(filteredRentData,)
+      
+      leafletProxy('rentMap',data=rowSelectedSale) %>%
+        addCircles(lng = ~longitude, lat = ~latitude) %>%
+        addCircleMarkers(data=rowSelectedSale,
+                         lat =  ~latitude, lng =~longitude, layerId = ~propertyCode,
+                         radius = 8, popup = ~as.character(cntnt),
+                         fillColor = ~pal(rentabilidad_grupo),
+                         stroke = T, color = "black", opacity=0.25, fillOpacity = 1)
+      
+    })
+    
     
   })
 
@@ -161,14 +185,14 @@ shinyServer(function(input, output) {
   
   #display Sale data
   saleDataOutput<-datatable(dadesSale[,c('ROIpct','ROIpct_15','price','priceByArea',
-                                                        'SuggestedRentalPrice','propertyType','size',
-                                                        'rooms','floor','hasLift',
-                                                        'exterior','status','address','url')],
+                                                        'SuggestedRentalPrice','propertyTypeEsp','size',
+                                                        'rooms','floorEsp','hasLiftEsp',
+                                                        'exteriorEsp','statusEsp','address','url')],
                                     filter = 'top',
                                     colnames = c("Rentabilidad", 'Rentabilidad (Precio+15%)',"Precio", "Precio/m2",
                                                  "Alquiler estimado", "Tipo", "m2",
                                                  "Habitaciones","Altura","Ascensor",
-                                                 "Exterior","Estado", "Dirección", "Enlace"),
+                                                 "Exterior/Interior","Estado", "Dirección", "Enlace"),
                             options=list(pageLength=20,
                                          lengthMenu=c(10,20,50),
                                          dom='lptrp'),
@@ -181,10 +205,10 @@ shinyServer(function(input, output) {
   #display Rent data
   
   output$rentData <-DT::renderDataTable(datatable(
-    dadesRent[,c('price','priceByArea','propertyType','size','rooms','floor','hasLift','exterior',
-                 'status','address','url')],filter = 'top',
+    dadesRent[,c('price','priceByArea','propertyTypeEsp','size','rooms','floorEsp','hasLiftEsp','exteriorEsp',
+                 'statusEsp','address','url')],filter = 'top',
     colnames = c("Alquiler", "Alquiler/m2", "Tipo", "m2","Habitaciones",
-                 "Altura","Ascensor","Exterior","Estado", "Dirección", "Enlace"),
+                 "Altura","Ascensor","Exterior/Interior","Estado", "Dirección", "Enlace"),
     options=list(pageLength=20,
                  lengthMenu=c(10,20,50),
                  dom='lptrp'),
