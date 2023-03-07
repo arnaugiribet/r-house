@@ -3,8 +3,8 @@ import json
 import csv
 from collections import OrderedDict
 
-path_to_outputs = '01-data_download/'
-path_to_folders = [path_to_outputs + folder for folder in os.listdir(path_to_outputs) if '_rent' in folder]
+path_to_outputs = '01-data_download/outputs/'
+path_to_folders = [path_to_outputs + folder for folder in os.listdir(path_to_outputs) if 'output' in folder]
 
 path_to_json = []
 for path_to_folder in path_to_folders:
@@ -15,9 +15,8 @@ for path_to_folder in path_to_folders:
 
 # exportar totes les dades
 ## si fem sale
-idealista_properties = open('01-data_download/idealista_properties.csv', 'w', newline='', encoding='utf-8')
-## si fem rent
-idealista_properties = open('01-data_download/idealista_rentals.csv', 'w', newline='', encoding='utf-8')
+idealista_properties = open('01-data_download/01_output_idealista_properties.csv', 'w', newline='', encoding='utf-8')
+
 writer_idealista_properties = csv.writer(idealista_properties, delimiter='|')
 
 keys_title = ['propertyCode', 'thumbnail', 'externalReference', 'numPhotos', 'floor', 'price', 'propertyType',

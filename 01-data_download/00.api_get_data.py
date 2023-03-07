@@ -59,7 +59,9 @@ def search(page_num):
                                   'propertyType': 'homes',
                                   'locationId': '0-EU-ES-08',
                                   'flat': 'true',
-                                  # 'maxPrice': '100000',
+                                  #'maxPrice': '300000',
+                                  'maxSize': '250',
+                                  #'sinceDate': 'W',
                                   'maxItems': '50',
                                   'numPage': str(page_num)}
 
@@ -68,12 +70,11 @@ def search(page_num):
 
     return data
 
-
 houses = []
-for p in range(1, 150 + 1):
+for p in range(1, 144 + 1):
     print(p)
     houses.append(search(page_num=p))
 
 for p in range(len(houses)):
-    with open("01-data_download/output9_rent/Houses_Page" + str(p + 1) + ".json", "w", encoding='utf-8') as outfile:
+    with open("01-data_download/outputs/output17bcn_rent/Flats_Page" + str(p + 1) + ".json", "w", encoding='utf-8') as outfile:
         outfile.write(str(houses[p]))
